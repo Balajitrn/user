@@ -5,16 +5,12 @@ import com.eshop.usermanagement.dto.UserProfileUpdateDTO;
 import com.eshop.usermanagement.dto.UserRegistrationDTO;
 import com.eshop.usermanagement.entity.User;
 import com.eshop.usermanagement.repository.UserRepository;
-import javassist.NotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Bean;
-//import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-//import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.web.bind.annotation.ResponseBody;
+
 
 import java.util.List;
-import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
@@ -22,16 +18,12 @@ public class UserService {
 
 
     private final UserRepository userRepository;
-//    private final PasswordEncoder passwordEncoder;
+    private final PasswordEncoder passwordEncoder;
 
-//    @Autowired
-//    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
-//        this.userRepository = userRepository;
-//        this.passwordEncoder = passwordEncoder;
-//    }
     @Autowired
-    public UserService(UserRepository userRepository) {
+    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     /**
@@ -41,6 +33,7 @@ public class UserService {
      */
     public UserRegistrationDTO registerUser(UserRegistrationDTO userRegistrationDTO){
 
+        // Check if the email is already used
         if(userRepository.findByEmail(userRegistrationDTO.getEmail())!=null){
             throw new IllegalArgumentException("Email already in use");
         }
@@ -48,7 +41,9 @@ public class UserService {
         User user = new User();
         user.setUsername(userRegistrationDTO.getUsername());
         user.setEmail(userRegistrationDTO.getEmail());
-        user.setPasswordHash(userRegistrationDTO.getPasswordHash());
+        //user.setPasswordHash(userRegistrationDTO.getPasswordHash());
+        user.setPasswordHash(passwordEncoder.encode(userRegistrationDTO.getPasswordHash()));
+        System.out.println(passwordEncoder.encode(userRegistrationDTO.getPasswordHash()));
         user.setFirstName(userRegistrationDTO.getFirstName());
         user.setLastName(userRegistrationDTO.getLastName());
         user.setDateOfBirth(userRegistrationDTO.getDateOfBirth());
@@ -68,21 +63,34 @@ public class UserService {
     /**
      * Method takes inputs(email,password) and authenticates
      * @param userAuthenticateDTO
-     * @return
+     * @return String
      */
     public String authenticateUser(UserAuthenticateDTO userAuthenticateDTO){
         User user = userRepository.findByEmail(userAuthenticateDTO.getEmail());
-        System.out.println(user.getEmail());
-       if(!Objects.equals(user.getPasswordHash(), userAuthenticateDTO.getPasswordHash())){
-           return "Password doesn't match! Authentication failed";
-       }
-       return "User authenticated";
+        if(user == null){
+            return "User not found "+userAuthenticateDTO.getEmail();
+        }
+
+        if(!passwordEncoder.matches(userAuthenticateDTO.getPasswordHash(),user.getPasswordHash())) {
+            return "Password doesn't match! Authentication failed";
+        }
+        return "User authenticated";
     }
 
 
+    /**
+     *
+     * @param userProfileUpdateDTO
+     * @param id
+     * @return userProfileUpdateDTO
+     */
     public UserProfileUpdateDTO updateUserById(UserProfileUpdateDTO userProfileUpdateDTO, Long id){
 
         User user = userRepository.findById(id).orElseThrow(()->new IllegalArgumentException("User not found with id = "+id));
+
+        if(user.getPasswordHash().equals(userProfileUpdateDTO.getPasswordHash())){
+            throw new IllegalArgumentException("Password should not be same as the previous password");
+        }
 
         user.setUsername(userProfileUpdateDTO.getUsername());
         user.setEmail(userProfileUpdateDTO.getEmail());
@@ -98,21 +106,36 @@ public class UserService {
         return new UserProfileUpdateDTO(user.getId(), user.getUsername(), user.getEmail(), user.getPasswordHash(), user.getFirstName(),user.getLastName(), user.getDateOfBirth());
     }
 
+    /**
+     * Method to get the list of the registered users
+     * @return List<UserRegistrationDTO>
+     */
     public List<UserRegistrationDTO> getUserList(){
         List<User> userList = userRepository.findAll();
         return userList.stream().map(this::entityToDTO).collect(Collectors.toList());
     }
 
+    /**
+     * Method to get User by Id
+     * @param id
+     * @return UserRegistrationDTO
+     */
     public UserRegistrationDTO getUserById(Long id){
         User user = userRepository.findById(id).orElseThrow(()->new IllegalArgumentException("User not found "+id));
         return entityToDTO(user);
     }
 
-    public void deleteById(Long id){
+    /**
+     * Method to delete User by Id
+     * @param id
+     * @return String
+     */
+    public String deleteById(Long id){
         if(!userRepository.existsById(id)){
-            throw new IllegalArgumentException("Product not found with id "+id);
+            throw new IllegalArgumentException("User not found with id "+id);
         }
         userRepository.deleteById(id);
+        return "Successfully deleted with id " + id;
     }
 
 //    @Bean
