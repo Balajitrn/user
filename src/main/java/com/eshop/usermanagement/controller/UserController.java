@@ -23,18 +23,29 @@ public class UserController {
 
 
     @PostMapping("/register")
-    public ResponseEntity<UserRegistrationDTO> registerNewUser(@RequestBody UserRegistrationDTO userRegistrationDTO){
-        return new ResponseEntity<>(userService.registerUser(userRegistrationDTO), HttpStatus.OK);
+    public ResponseEntity<?> registerNewUser(@RequestBody UserRegistrationDTO userRegistrationDTO){
+
+        try{
+            return new ResponseEntity<>(userService.registerUser(userRegistrationDTO), HttpStatus.OK);
+        } catch (Exception e){
+            return new ResponseEntity<>(e.getMessage(),HttpStatus.UNAUTHORIZED);
+        }
+
+
     }
 
     @PostMapping("/authenticate")
-    public ResponseEntity<String> authenticateUser(@RequestBody UserAuthenticateDTO userAuthenticateDTO){
+    public ResponseEntity<?> authenticateUser(@RequestBody UserAuthenticateDTO userAuthenticateDTO){
         return new ResponseEntity<>(userService.authenticateUser(userAuthenticateDTO),HttpStatus.OK);
     }
 
     @PutMapping("/{userId}")
-    public ResponseEntity<UserProfileUpdateDTO> updateUserById(@RequestBody UserProfileUpdateDTO userProfileUpdateDTO,@PathVariable Long userId){
-        return new ResponseEntity<>(userService.updateUserById(userProfileUpdateDTO,userId),HttpStatus.OK);
+    public ResponseEntity<?> updateUserById(@RequestBody UserProfileUpdateDTO userProfileUpdateDTO,@PathVariable Long userId){
+        try {
+            return new ResponseEntity<>(userService.updateUserById(userProfileUpdateDTO, userId), HttpStatus.OK);
+        }catch (Exception e){
+            return new ResponseEntity<>(e.getMessage(),HttpStatus.UNAUTHORIZED);
+        }
     }
 
     @GetMapping
@@ -43,13 +54,22 @@ public class UserController {
     }
 
     @GetMapping("/{userId}")
-    public ResponseEntity<UserRegistrationDTO> getUserById(@PathVariable Long userId){
-        return new ResponseEntity<>(userService.getUserById(userId),HttpStatus.OK);
+    public ResponseEntity<?> getUserById(@PathVariable Long userId){
+        try{
+            return new ResponseEntity<>(userService.getUserById(userId),HttpStatus.OK);
+        }catch (Exception e){
+             return new ResponseEntity<>(e.getMessage(),HttpStatus.UNAUTHORIZED);
+        }
     }
 
     @DeleteMapping("/{userId}")
     public ResponseEntity<?> deleteUserById(@PathVariable Long userId){
-        userService.deleteById(userId);
-        return new ResponseEntity<>(HttpStatus.OK);
+        try{
+            return new ResponseEntity<>(userService.deleteById(userId),HttpStatus.OK);
+           // userService.deleteById(userId);
+           // return new ResponseEntity<>(HttpStatus.OK);
+        }catch (Exception e){
+            return new ResponseEntity<>(e.getMessage(),HttpStatus.UNAUTHORIZED);
+        }
     }
 }
